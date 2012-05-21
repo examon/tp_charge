@@ -1,0 +1,48 @@
+Spec for SMAPI charge threshold control:
+
+To issue a SMAPI request, set EAX to 0x5380, then do:
+ out <smapi port>, al
+ out 0x4f, al
+
+The SMAPI call takes input in ebx, ecx, edi, and esi.
+
+On error, ah will contain a nonzero value.  0xA6 apparently means
+"try again".  0x53 means that nothing happened (happens on X220
+when trying to access start thresholds).
+
+If SMAPI is present, CMOS bytes 0x7C and 0x7D will contain 0x5349
+(little endian) and CMOS bytes 0x7E and 0x7F will contain the port
+(also little endian).
+
+At least on X200s and X220, the port is 0xB2.
+
+ebx should contain:
+ 0x2116 to get the start threshold
+ 0x2117 to set the start threshold
+ 0x211a to get the stop threshold
+ 0x211b to set the stop threshold
+
+ch should contain the battery number (1 or 2).  Other inputs to
+"get" calls should be zero.
+
+On "get", the answer goes in cl, and ch will have its low bit set.
+
+On "set", the threshold goes in cl (0 = default).  edi and esi
+should be read by "get" and passed back into "set" verbatim.
+Do not issue another SMAPI call for 50ms after a "set" or the system
+may forget the value you just set.
+
+Setting 0 for stop means 100%.  Setting 100% is invalid.
+
+A start threshold of 0 means 98%.
+
+The charge thresholds on the X220 can also be programmed through the ACPI
+interface to the EC.  Register 0x24 is the BAT0 stop threshold and 0x25
+is the BAT1 stop threshold.  I haven't checked whether this is the same
+for any other model.
+
+
+As a note: on the X220, I don't know how to program the start thresholds
+at all.  (On Windows, I can't find any battery charge control, unlike
+on older laptops.  But the stop threshold as programmed through SMAPI
+or the EC still works.)
